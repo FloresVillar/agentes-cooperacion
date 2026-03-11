@@ -1,6 +1,7 @@
 <?xml version="1.0"?>
 <robot name="agent_robot" xmlns:xacro="http://www.ros.org/wiki/xacro">
   <!-- parametros -->
+  
   <xacro:property name="wheel_radius" value="0.05"/>
   <xacro:property name="wheel_width" value="0.02"/>
   <xacro:property name="base_size" value="0.3"/>
