@@ -1,0 +1,15 @@
+package.xml
+setup.cfg
+setup.py
+../../build/agente_pkg/agente_pkg.egg-info/PKG-INFO
+../../build/agente_pkg/agente_pkg.egg-info/SOURCES.txt
+../../build/agente_pkg/agente_pkg.egg-info/dependency_links.txt
+../../build/agente_pkg/agente_pkg.egg-info/entry_points.txt
+../../build/agente_pkg/agente_pkg.egg-info/requires.txt
+../../build/agente_pkg/agente_pkg.egg-info/top_level.txt
+../../build/agente_pkg/agente_pkg.egg-info/zip-safe
+agente_pkg/__init__.py
+agente_pkg/mover_agente.py
+launch/agente_sim.launch.py
+resource/agente_pkg
+urdf/agente.xacro
