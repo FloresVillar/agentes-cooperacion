@@ -1,0 +1,2 @@
+Invoking command in '/home/esau/agentes-cooperacion/agentes_cooperacion/src/agente_pkg': PYTHONDONTWRITEBYTECODE=1 VIRTUAL_ENV_PROMPT=(agentes) /usr/bin/python3 -m unittest -v
+Invoked command in '/home/esau/agentes-cooperacion/agentes_cooperacion/src/agente_pkg' returned '5': PYTHONDONTWRITEBYTECODE=1 VIRTUAL_ENV_PROMPT=(agentes) /usr/bin/python3 -m unittest -v

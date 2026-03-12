@@ -1,0 +1,7 @@
+Metadata-Version: 2.1
+Name: agente-pkg
+Version: 0.0.1
+Summary: Paquete ROS2 agente
+Maintainer: Esau
+Maintainer-email: efloresv@uni.pe
+License: Apache-2.0
