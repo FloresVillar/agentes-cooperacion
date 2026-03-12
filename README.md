@@ -201,3 +201,70 @@ De modo que podemos afirmar que los agentes ia con personalidades impuestas, que
 Aun mas, el efecto del restraso de la comunicacion no es lineal,no es monotona,pues crea incentivos para la traicion y la explotacion, si el tiempo es mayor el miedo a la represalia no es tan considerable, entonces sucede lo descrito.
 
 Finalmente la quinta capa( comunicacion tcp?) influyen de una manera ni mucho menos simplista, no se debe reducir el argumento a "disminuir el tiempo de retraso de la comunicacion a lo minimo posible"
+
+
+## SIMULACION EN RVIZ mediante ros2
+
+En changelog.md se describen la teoria de ros2 , nodos, mensajes, canales. 
+
+Sin embargo se detalla (hasta este punto) la teoria pertienente.
+
+La estructura de paquetes 
+```bash
+.
+├── ejecucion.sh
+├── limpieza.sh
+└── src
+    └── agente_pkg
+        ├── action
+        │   └── MoveJoint.action
+        ├── agente_pkg
+        │   ├── __init__.py
+        │   └── mover_agente.py
+        ├── launch
+        │   └── agente_sim.launch.py
+        ├── package.xml
+        ├── resource
+        │   └── agente_pkg
+        ├── setup.cfg
+        ├── setup.py
+        └── urdf
+            └── agente.xacro
+```
+
+El directorio raiz del workspace es **agentes_cooperacion** , es el espacio global de trabajo , el codigo fuente reside en **src/** , los binarios resultantes (construidos luego de **colcon build**) se almacenan en **build/ install/ log/** .
+
+- **src/agente_pkg/urdf/agente.xacro** : define la estructura fisica de los carritos , se diseña como una plantilla parametrizada que acepta un prefijo **(arg perfix)** para permiten la creacion de multiples carritos sin piezas que colisionen el sistema.
+
+- **src/agente_pkg/launch/agente_sim.launch.py** es el orquestador, inicia la simulacion lanzando tres copias del robot, gestiona los namespaces y las posiciones iniciales en el mapa
+
+- **src/agente_pkg/agente_pkg/mover_agente.py** Nodo de control en python, calcula la rotacion de las ruedas
+
+**NODOS**<br>
+- **mover_agente** : este nodo publica en el topico /carro{i}/joint_states. Obtiene su propio namespace (**self.get_namespace()**) para saber a que carro pertenecen las ruedas.
+
+- **robot_state_publisher** Se lanza una instancia por cada carro desde .launch.py , recibe la descripcion del robot procesada desde xacro(mapping={'prefix':prefijo}). Escucha los **joint_states** de su respectivo carro y publica TF (transform frames) que define donde esta cad rueda respecto al cuerpo del robot.
+
+- **static_transform_publisher** un nodo de utilidad que actua como un "clavo" fisico. Conecta el origen del mundo (map) con el **base_link** de cada carro, permitiendo el renderizado de los carritos.
+
+- **rviz** es el nodo de visualizacion , suscrito a los topicos **/tf** muestra los modelos 3D.
+
+**TOPICOS**<br>
+Los canales de comunicacion asincronos. 
+- /caroo{i}/joint_states , publicado por mover_agente.py, contiene el arreglo **self.joint_names** con los nombres de las articulaciones y sus posiciones.
+
+- /tf y /tf_static , el canal universal de las coordenadas, 
+**robot_state_publisher** y el **static_transform_publisher**escriben la ubicación de cada pieza. RViz lee este tópico para saber dónde dibujar cada link.
+
+- **/carro{i}/robot_descripcion** topico de tipo **latched** donde se publica el xmñl del robot. Rviz lo lee para saber que forma tiene el modelo (cajas, cilindro,etc)
+
+**MENSAJES**<br>
+
+En **package.xml** Se define el nombre , version y las dependencias, <build_type>ament_python</build_type> indica que se usa ament_python como build type,de modo que colcon sabe que no el paquete no necesita compilarse solo se copiaran los scripts de python y archivos de recursos (urdf , launch) a la carpeta de instalacion
+
+Mientras que **setup.py** es donde se registran los archivos. Entry_points detalla que cuando se escriba **mover_agente** en la terminal se ejecuta la funcion main que esta en **mover_agente.py**
+
+En lugar de python3 mover_agente.py ,en ros2 se usará el comando **ros2 agente_pkg mover_agente**
+los entry points permiten que colcon (el constructor de ROS) genere un enlace simbolico en la carpeta install,de modo que el script se vuelve parte del PATH
+
+La lista **data_files** define la estructura de busquedas. ROS2 no busca en la carpeta src cuando se ejcuta algo.Lo busca en install . Setup.py es el mapa que indica a colcon como mover **.xacro** y los **launch.py** desde src hacia **install/agente_pkg/share/..** .Si un archivo no esta en setup.py Ros no los encuentra.
