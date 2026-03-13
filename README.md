@@ -338,5 +338,27 @@ RVIZ no lee directamente el script, sino que escucha al canl **Transformada TF**
 El launch crea 3 copias del nodo **mover_agente** en memoria. Cada uno tiene sus atributos,publicando cada uno una posicion diferente.
 
 
+Se tiene como referencia el modelo cinematico de ackerman (coche convencional) 
+
+Otro detalle es que "infundir moviminento" no implica desplazamiento, se calcula la nueva posicion de acuerdo a **x_nuevo = X_anterior + v*cos(theta)* delta T** v: velocidad, theta : angulo del timon.
+
+
+Con nuevas modificaciones en **mover_agente** al usar la suscripcion a cmd_val ademas de aislar por espacio de nombres ( encapsular recursos), conseguimos topicos relativos haciendo que cuando el script se suscribe a **cmd_vel** (relativo) , el middleware (DDS) registra en el grafo los nombres **/carro1/cmd_vel  /carro2/cmd_vel**.
+
+Ademas a nivel de red , cada  topico tiene su propia **GUID(global unique indetifier)** , entonces cuando enviamos un mensaje desde .sh al topico carro1 los suscriptores   de los otros carros ignoran el paquete a nivel hardware/kernel  porque el **Topic Name** en la cabecera del paquete no coincide.
+
+```bash
+ros2 topic pub -1 /carro$CARRO_NUM/cmd_vel geometry_msgs/msg/Twist "{
+    linear: {x: $VEL_LINEAL, y: 0.0, z: 0.0}, 
+    angular: {x: 0.0, y: 0.0, z: $RAD}
+}"
+```
+
+al ejecutar ese bash **bash ordenes.sh 1 0.5 30** por ejemplo, ros2 topic pub -1 crea un nodo temporal (instanciacion del publisher efimero), este nodo anuncia en la red **publicar en /carro1/cmd_vel** el nodo mover_agente responde **estoy escuchando**(descubrimiento) ; la velocidad y el angulo se empaquetan en CDR (serializacion XCDR) ; el mensaje llega al buffer del suscriptor,el script de python no se detiene,la siguiente vez que el ejecutor (rclpy.spin) tiene un hueco , dispara el **cmd_callback**.
+
+De topico a movimiento : 
+- Recepcion : callback de interrupcion actualiza self.v y angulo 
+- integracion: self.theta += self.w*dt
+- transformada: TransformBroadcaster envia la nueva relacion entre frame map y base_link
 
 

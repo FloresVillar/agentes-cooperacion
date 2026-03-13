@@ -1,73 +1,81 @@
 import rclpy
 from rclpy.node import Node
 from sensor_msgs.msg import JointState
+from geometry_msgs.msg import Twist, TransformStamped
 from tf2_ros import TransformBroadcaster
-from geometry_msgs.msg import TransformStamped
 import math
 
-
-#===================================================================
 class MoverAgente(Node):
-    #---------------------------------------------------------------
     def __init__(self):
         super().__init__('mover_agente')
-        # Sin la barra '/' inicial para que sea relativo al namespace
-        self.ns = self.get_namespace().strip('/') 
-        try:
-            # Extrae el número del nombre (ej: 'carro2' -> 2)
-            index = int(''.join(filter(str.isdigit, self.ns)))
-            self.y = float(index - 1) * 1.5
-        except (ValueError, IndexError):
-            self.y = 0.0
-
-        self.x = 0.0
-        self.theta = 0.0
-        self.t = 0.0
-        self.pub = self.create_publisher(JointState, 'joint_states', 10)  # QoS history depth, guarda 10 mensajes antes de descartar--
-        self.tf_broadcaster = TransformBroadcaster(self)
-        self.timer = self.create_timer(0.05,self.mover)
-       
-        # Obtenemos el nombre del carro (carro1, carro2...)
+        self.ns = self.get_namespace().strip('/')             # Obtiene namespace (carro1, etc)
         
-        # Los nombres deben coincidir EXACTAMENTE con el prefijo del launch
-        self.joint_names = [
-            f'{self.ns}/left_wheel_joint_a',
-            f'{self.ns}/left_wheel_joint_p', 
-            f'{self.ns}/right_wheel_joint_a',
-            f'{self.ns}/right_wheel_joint_p'
-        ]   
-    #-----------------------------------------------------------
-    def mover(self):
-        velocidad = 0.2
-        dt = 0.05
-        self.x += velocidad * math.cos(self.theta) * dt
-        self.y += velocidad * math.sin(self.theta) * dt
+        # Estado del robot
+        self.x = 0.0                                          # Posicion inicial X
+        try:
+            index = int(''.join(filter(str.isdigit, self.ns))) # Extrae numero para carril
+            self.y = float(index - 1) * 1.5                   # Posicion inicial Y
+        except: self.y = 0.0
+        
+        self.theta = 0.0                                      # Orientacion (yaw)
+        self.v = 0.0                                          # Velocidad lineal actual
+        self.w = 0.0                                          # Velocidad angular actual
+        self.wheel_angle = 0.0                                # Angulo del timon (ruedas frontales)
+
+        # Suscripcion a comandos de velocidad
+        self.sub = self.create_subscription(Twist, 'cmd_vel', self.cmd_callback, 10) # Escucha ordenes
+        
+        # Publicadores
+        self.joint_pub = self.create_publisher(JointState, 'joint_states', 10)       # Mueve piezas
+        self.tf_broadcaster = TransformBroadcaster(self)                             # Ubica en mapa
+        self.timer = self.create_timer(0.05, self.update_physics)                    # Ciclo de fisica
+
+    def cmd_callback(self, msg):
+        self.v = msg.linear.x                                 # Guarda velocidad lineal recibida
+        self.wheel_angle = msg.angular.z                                # Guarda velocidad angular recibida
+
+    def update_physics(self):
+        dt = 0.05                                             # Paso de tiempo
+        L = 0.5
+        if abs(self.v) > 0.01:
+            self.w = (self.v / L) * math.tan(self.wheel_angle)
+        else:
+            self.w = 0.0
+        # Logica de "Timon" simple (Direccion)
+        #self.wheel_angle = self.w * 0.5                       # El angulo visual de las ruedas
+        
+        # Actualizacion de odometria (Movimiento en el plano)
+        self.theta += self.w * dt                             # Actualiza orientacion
+        self.x += self.v * math.cos(self.theta) * dt          # Movimiento en X
+        self.y += self.v * math.sin(self.theta) * dt          # Movimiento en Y
+
+        # 1. Enviar Transformada (TF) para RViz
         t = TransformStamped()
         t.header.stamp = self.get_clock().now().to_msg()
         t.header.frame_id = 'map'
         t.child_frame_id = f'{self.ns}/base_link'
         t.transform.translation.x = self.x
         t.transform.translation.y = self.y
-        t.transform.translation.z = 0.0
-        t.transform.rotation.w = 1.0
+        t.transform.rotation.z = math.sin(self.theta / 2.0)   # Conversion simple a quaternion
+        t.transform.rotation.w = math.cos(self.theta / 2.0)
         self.tf_broadcaster.sendTransform(t)
-        msg = JointState()
-        msg.header.stamp = self.get_clock().now().to_msg()
-        msg.name = self.joint_names
-        self.t += 0.1
-        val = math.sin(self.t)
-        msg.position = [val, val, val, val]
-        self.pub.publish(msg) 
 
+        # 2. Enviar Joints (Incluyendo el giro de las ruedas delanteras)
+        js = JointState()
+        js.header.stamp = self.get_clock().now().to_msg()
+        # Nota: Asegurate que estos nombres coincidan con tu URDF
+        js.name = [
+            f'{self.ns}/left_wheel_joint_a',  # Delantera Izq
+            f'{self.ns}/right_wheel_joint_a', # Delantera Der
+            f'{self.ns}/left_wheel_joint_p',  # Trasera Izq
+            f'{self.ns}/right_wheel_joint_p'  # Trasera Der
+        ]
+        # Las frontales usan wheel_angle (timon), las traseras 0.0 (giro de traccion omitido por simpleza)
+        js.position = [self.wheel_angle, self.wheel_angle, 0.0, 0.0] 
+        self.joint_pub.publish(js)
 
-#==============================================================
 def main(args=None):
-    rclpy.init()
+    rclpy.init(args=args)
     node = MoverAgente()
     rclpy.spin(node)
-    node.destroy_node()
     rclpy.shutdown()
-#-------------------------------------------------------------
-
-if __name__ == '__main__':
-    main()
