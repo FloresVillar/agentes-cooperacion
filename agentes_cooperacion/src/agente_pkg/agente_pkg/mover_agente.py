@@ -16,7 +16,7 @@ class MoverAgente(Node):
         try:
             # Extrae el número del nombre (ej: 'carro2' -> 2)
             index = int(''.join(filter(str.isdigit, self.ns)))
-            self.y = float(index - 1) * 1.5
+            self.y = float(index - 1) * 1.5  # calculo del ccarril respecto al indice
         except (ValueError, IndexError):
             self.y = 0.0
 

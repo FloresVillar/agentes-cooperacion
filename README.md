@@ -259,12 +259,84 @@ Los canales de comunicacion asincronos.
 - **/carro{i}/robot_descripcion** topico de tipo **latched** donde se publica el xmñl del robot. Rviz lo lee para saber que forma tiene el modelo (cajas, cilindro,etc)
 
 **MENSAJES**<br>
+El tipo de mensajes principal es **sensor_msgs/jontState**.Este paquete tiene 
+- **header** , estampa de tiempo para sincronizacion
 
-En **package.xml** Se define el nombre , version y las dependencias, <build_type>ament_python</build_type> indica que se usa ament_python como build type,de modo que colcon sabe que no el paquete no necesita compilarse solo se copiaran los scripts de python y archivos de recursos (urdf , launch) a la carpeta de instalacion
+- **name** , los nombres de los joints ( carro1/left_wheel_joint_a)
+- **position** , el valor angular en radianes 
 
-Mientras que **setup.py** es donde se registran los archivos. Entry_points detalla que cuando se escriba **mover_agente** en la terminal se ejecuta la funcion main que esta en **mover_agente.py**
+
+
+**MOVIMIENTOS DE LOS AGENTES**<br>
+el giro de las ruedas se define en mover() , val = math.sin(self.t).
+
+Este mensaje se asigna a 4 articulaciones  **msg.position = [val,val,val,val]**
+
+**self.t** incrementa el paso , lo que genera un movimiento continuo
+
+
+**LAUNCH FILE(agente_sim.launch.py)**<br>
+- El bucle for crea 3 grupos de nodos
+- se parametriza **agente.xacro** para cada grupo (carrito).
+
+- Encadenamiento , mover_agente crea un publicadoren el topico **joint_states** . Este topico es el puente , transporta la informacion cinematica (angulos) hacia el nodo **robot_state_publisher** ,quien traduce estos valores en TF(transformadas de coordenadas) , para que rviz los represente visualmente.
+
+
+ 
+**package.xml**<br> 
+Se define el nombre , version y las dependencias, <build_type>ament_python</build_type> indica que se usa ament_python como build type,de modo que colcon sabe que no el paquete no necesita compilarse solo se copiaran los scripts de python y archivos de recursos (urdf , launch) a la carpeta de instalacion
+
+**setup.py**<br> 
+Es donde se registran los archivos. Entry_points detalla que cuando se escriba **mover_agente** en la terminal se ejecuta la funcion main que esta en **mover_agente.py**
 
 En lugar de python3 mover_agente.py ,en ros2 se usará el comando **ros2 agente_pkg mover_agente**
 los entry points permiten que colcon (el constructor de ROS) genere un enlace simbolico en la carpeta install,de modo que el script se vuelve parte del PATH
 
 La lista **data_files** define la estructura de busquedas. ROS2 no busca en la carpeta src cuando se ejcuta algo.Lo busca en install . Setup.py es el mapa que indica a colcon como mover **.xacro** y los **launch.py** desde src hacia **install/agente_pkg/share/..** .Si un archivo no esta en setup.py Ros no los encuentra.
+
+Resumiendo, el proyecto es **escalable**, al usar xacro parametrizado , si queremos mas carritos , solo se necesitaria modificar el for en agente_sim.launch.py.
+
+Es **modular**, pues separamos la logica de calculo (mover_agente) del calculo de la transformada **robot_state_publisher** es un nodo externo de ros2 quien usa la estructura del archivo xacro.
+ 
+**Aislamiento** , los namespaces garantizan que cada agente sea un escosistema difirente.
+
+Ahora que se dispone de los carritos se les otorga movimiento, en un primer momento un movimiento infinito hacia adelante.
+
+```bash
+SISTEMA DE ARCHIVOS          PROCESOS EN MEMORIA (NODOS)          VISUALIZACIÓN (RViz)
+-------------------          ---------------------------          --------------------
+
+agente_sim.launch.py
+  |
+  |-- (Bucle for 1..3) ----> [ robot_state_publisher ] --------> Carga el URDF/Modelo 3D
+  |                                     ^                        (Sabe cómo se ve el carro)
+  |                                     |
+  |-- ld.add_action() -----> [ mover_agente (Script) ]           
+                               |        |
+                               |        |-- self.create_timer(0.05, self.mover)
+                               |        |   (Cada 50ms llama a la función mover)
+                               |        |
+                               |        +--> self.tf_broadcaster.sendTransform(t)
+                               |             (Publica: "carroX/base_link está en X, Y")
+                               |             |
+                               |             v
+                               +---------- [ TF TREE ] <--------- RViz lee esto para saber 
+                                             (Mapa de           DÓNDE dibujar cada modelo.
+                                            coordenadas)
+```
+
+**ld = LaunchDescription()** Ros2 llena el pool de nodos y los lanza en paralelo. Mientras que **ld.load_action()** prepara un proceso para el ejecutable. Solo arranca el programa en python
+
+En mover agente **self.create_time** interrumpe y ejecuta la funcion **mover** cada cierto tiempo.
+
+**self.tf_broadcaster.sendTransform(t_msg)** envia la coordenada calculada al sitema global de ROS
+
+RVIZ no lee directamente el script, sino que escucha al canl **Transformada TF**. Es el script quien publica alli, rviz mueve el dibujo del carro basandose en eso.
+
+**rclpy** El spin es un bucle infinito , mantiene el programa vivo para para que el timer pueda seguir saltando cad  0.05s de lo contrario el programa terminaria en 1 segundo.
+
+El launch crea 3 copias del nodo **mover_agente** en memoria. Cada uno tiene sus atributos,publicando cada uno una posicion diferente.
+
+
+
+
