@@ -6,7 +6,7 @@ GRADOS=$3
 
 # Operacion matematica en caliente
 PI=3.14159
-RAD=$(echo "scale=4; $GRADOS * $PI / 180" | bc)
+RAD=$(bc <<< "scale=4; $GRADOS * $PI / 180")
 # ejemplo de ejecucion:   bash ordenes.sh 3 0.0 0
 echo "Comando: Carro $CARRO_NUM a $VEL_LINEAL m/s con timon en $GRADOS grados ($RAD rad)"
 
