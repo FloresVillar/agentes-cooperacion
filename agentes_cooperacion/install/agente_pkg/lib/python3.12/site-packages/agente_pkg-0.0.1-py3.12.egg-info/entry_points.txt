@@ -1,2 +1,0 @@
-[console_scripts]
-mover_agente = agente_pkg.mover_agente:main

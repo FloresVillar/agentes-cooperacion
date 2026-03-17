@@ -1,0 +1,55 @@
+version: "3.9"
+
+services:
+  app:
+    build: .
+    container_name: agentes-python
+    volumes: 
+      - ./app:/app/app
+      - ./agentes_cooperacion:/app/agentes_cooperacion
+    depends_on:
+      - ollama
+    environment:
+      - OLLAMA_HOST=http://ollama:11434
+      - PYTHONPATH=/app
+    networks:
+      - agentes-cooperacion-network 
+    stdin_open: true
+    tty: true
+
+  ollama:
+    image: ollama/ollama
+    container_name: ollama-server 
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama-data:/root/.ollama
+    networks:
+      - agentes-cooperacion-network
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:11434/api/tags"]
+      interval: 10s
+      timeout: 30s
+      retries: 5
+      start_period: 30s
+  ros2:
+    build:
+      context: .
+      dockerfile: Dockerfile.ros
+    container_name: agentes-ros2
+    volumes:
+      - ./agentes_cooperacion:/app/agentes_cooperacion
+      - /tmp/.X11-unix:/tmp/.X11-unix
+    environment:
+      - DISPLAY=${DISPLAY}
+      - ROS_DOMAIN_ID=0
+    networks:
+      - agentes-cooperacion-network
+    stdin_open: true
+    tty: true
+
+volumes:
+  ollama-data:
+
+networks:
+  agentes-cooperacion-network:

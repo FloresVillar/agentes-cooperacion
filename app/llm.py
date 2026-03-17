@@ -8,5 +8,9 @@ cliente = OpenAI(api_key = "ollama",
 def llamada_a_modelo(historial,prompt_sistema):
     mensajes = [{"role": "system", "content": prompt_sistema}] + historial
     respuesta = cliente.chat.completions.create(
-        model=""
+        model="llama3.2:1b",
+        messages=mensajes,
+        temperature=0,
+        max_tokens=300
     )
+    return respuesta.choices[0].message.content

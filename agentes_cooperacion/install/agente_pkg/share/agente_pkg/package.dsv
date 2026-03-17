@@ -1,4 +1,0 @@
-source;share/agente_pkg/hook/pythonpath.dsv
-source;share/agente_pkg/hook/pythonpath.sh
-source;share/agente_pkg/hook/ament_prefix_path.dsv
-source;share/agente_pkg/hook/ament_prefix_path.sh
