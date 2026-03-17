@@ -11,7 +11,7 @@ RAD=$(bc <<< "scale=4; $GRADOS * $PI / 180")
 echo "Comando: Carro $CARRO_NUM a $VEL_LINEAL m/s con timon en $GRADOS grados ($RAD rad)"
 
 # Inyeccion al topico usando el numero de carro para construir el namespace
-ros2 topic pub -1 /carro$CARRO_NUM/cmd_vel geometry_msgs/msg/Twist "{
+ros2 topic pub --once /carro$CARRO_NUM/cmd_vel geometry_msgs/msg/Twist "{
     linear: {x: $VEL_LINEAL, y: 0.0, z: 0.0}, 
     angular: {x: 0.0, y: 0.0, z: $RAD}
 }"

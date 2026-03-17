@@ -1,6 +1,6 @@
 COMPOSE=docker-compose
 APP_CONTAINER=agentes-python
-OLLAMA_CONTAINER=ollama-sever
+OLLAMA_CONTAINER=ollama-server
 MODELO=llama3.2:1b
 SERVICE?=app
 .PHONY: build run down logs shell-app limpieza ayuda
@@ -23,6 +23,8 @@ limpieza-service:
 	docker compose rm -f $(SERVICE) 
 	docker rmi agentes-cooperacion-app
 shell-app:
+	docker restart $(OLLAMA_CONTAINER)
+	docker restart $(APP_CONTAINER)
 	docker exec -it $(APP_CONTAINER) /bin/bash
 logs:
 	$(COMPOSE) logs -f
