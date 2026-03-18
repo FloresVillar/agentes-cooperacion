@@ -2,8 +2,10 @@ venv_agentes/
 __pycache__/ 
 .git/
 *.png
-imagenes/
-agentes_cooperacion/
-build/
-install/
-log/
+imagenes/ 
+agentes_cooperacion/build/
+agentes_cooperacion/install/
+agentes_cooperacion/log/
+*.pyc
+*.pdf
+.gitignore

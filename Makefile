@@ -3,7 +3,7 @@ APP_CONTAINER=agentes-python
 OLLAMA_CONTAINER=ollama-server
 MODELO=llama3.2:1b
 SERVICE?=app
-.PHONY: build run down logs shell-app limpieza ayuda
+.PHONY: build run down logs shell-app limpieza ayuda build-service limpieza-service logs-service
 DOCKER:=docker
 
 ayuda:
